@@ -1,6 +1,8 @@
 structure Value =
 struct
 
+open Sexp
+
 datatype value = INTval of int
     | CHARval of char
     | BOOLval of bool
@@ -9,8 +11,20 @@ datatype value = INTval of int
     | CONSval of value * value
     | VECval of value vector
     | SYMval of string (* introduced by QUOTE *)
-    | FUNCval of value -> value
+    | FUNCval of (value list -> value) ref
     | UNITval of unit (* When Scheme unspecified *)
+
+fun quote (INTsexp i) = INTval i
+  | quote (CHARsexp c) = CHARval c
+  | quote (BOOLsexp b) = BOOLval b
+  | quote (STRINGsexp s) = STRINGval s
+  | quote (SYMsexp s) = SYMval s
+  | quote (VECsexp v) =
+    VECval (Vector.tabulate (Vector.length v,
+			     fn i => quote (Vector.sub (v, i))))
+  | quote NILsexp = NILval
+  | quote (CONSsexp (head, tail)) =
+    CONSval (quote head, quote tail)
 
 (*
  * Pretty-printing
