@@ -1,6 +1,14 @@
 Group is
 
 ml-yacc-lib.cm
+Table.sig
+Table.sml
+Sexp.sml
 Scheme.grm
 Scheme.lex
 join.sml
+Value.sml
+Globals.sig
+Globals.sml
+Interpret.sml
+Test.sml
