@@ -251,6 +251,8 @@ and atomToAction (e as INTsexp i) _ _ = quote e
   | atomToAction (SYMsexp "add1") _ _ = makePrimFunc1 "add1" primAdd1
   | atomToAction (SYMsexp "sub1") _ _ = makePrimFunc1 "sub1" primSub1
   | atomToAction (SYMsexp "number?") _ _ = makePrimFunc1 "number?" primNumber
+  | atomToAction (SYMsexp "set-car!") _ _ = makePrimFunc2 "set-car!" primSetCar
+  | atomToAction (SYMsexp "set-cdr!") _ _ = makePrimFunc2 "set-cdr!" primSetCdr
 
   | atomToAction (SYMsexp s) _ table = valueIdentifier s table
 
@@ -291,9 +293,15 @@ and primCdr (CONSval (_, ref b)) = b
   | primCdr _ = raise TypeError "cdr"
 and primNull NILval = BOOLval true
   | primNull _ = BOOLval false
+and primSetCar (CONSval (refa, _), v) = UNITval (refa := v)
+  | primSetCar _ = raise TypeError "set-car!"
+and primSetCdr (CONSval (_, refb), v) = UNITval (refb := v)
+  | primSetCdr _ = raise TypeError "set-cdr!"
+
 and primEq (a, b) =
     (* Incorrect; this actually implements "equal?" *)
     raise Unimplemented "eq?"
+
 and primAtom (CONSval _) = BOOLval false
   | primAtom _ = BOOLval true
 and primZero (INTval 0) = BOOLval true
