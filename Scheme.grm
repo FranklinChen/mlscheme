@@ -1,13 +1,17 @@
 (* Scheme grammar *)
 
-(* Actually, need to handle dotted pairs. *)
-(* Also, should create new data type without abbreviations, etc. *)
-datatype sexp = INTsexp of int
-  | CHARsexp of char
-  | BOOLsexp of bool
-  | STRINGsexp of string
-  | IDsexp of string
-  | LISTsexp of sexp list
+open Sexp
+
+fun dottedPair xs last =
+    let
+	fun aux [x] = CONSsexp (x, last)
+	  | aux (x::xs) = CONSsexp (x, aux xs)
+    in
+	aux xs
+    end
+
+fun abbrevPrefix s e =
+    CONSsexp (IDsexp s, CONSsexp (e, NILsexp))
 
 %%
 
@@ -30,7 +34,10 @@ datatype sexp = INTsexp of int
   | STRING of string
   | ID of string
 
-%nonterm START of sexp list | EXP of sexp | EXPS of sexp list
+%nonterm START of sexp
+  | EXP of sexp
+  | EXPSTAR of sexp
+  | EXPLIST of sexp list
 
 %name Scheme
 
@@ -45,21 +52,24 @@ datatype sexp = INTsexp of int
 
 %%
 
-START : EXPS (EXPS)
-
-EXPS : (* empty *) ([])
-     | EXP EXPS (EXP :: EXPS)
+(* Read just one S-expression *)
+START : EXP (EXP)
 
 EXP : INT (INTsexp INT)
     | CHAR (CHARsexp CHAR)
     | BOOL (BOOLsexp BOOL)
     | STRING (STRINGsexp STRING)
     | ID (IDsexp ID)
-    | LPAREN EXPS RPAREN (LISTsexp EXPS)
-    | LVEC EXPS RPAREN (LISTsexp ((IDsexp "vector")::EXPS))
-    | QUOTESCHEME EXP (LISTsexp [IDsexp "quote", EXP])
-    | QUASIQUOTE EXP (LISTsexp [IDsexp "quasiquote", EXP])
-    | UNQUOTE EXP (LISTsexp [IDsexp "unquote", EXP])
-    | UNQUOTESPLICING EXP (LISTsexp [IDsexp "unquote-splicing", EXP])
+    | LPAREN EXPSTAR RPAREN (EXPSTAR)
+    | LPAREN EXP EXPLIST DOT EXP RPAREN (dottedPair (EXP1::EXPLIST) EXP2)
+    | LVEC EXPLIST RPAREN (VECsexp (Vector.fromList EXPLIST))
+    | QUOTESCHEME EXP (abbrevPrefix "quote" EXP)
+    | QUASIQUOTE EXP (abbrevPrefix "quasiquote" EXP)
+    | UNQUOTE EXP (abbrevPrefix "unquote" EXP)
+    | UNQUOTESPLICING EXP (abbrevPrefix "unquote-splicing" EXP)
 
-(* DOT *)
+EXPSTAR : (* empty *) (NILsexp)
+    | EXP EXPSTAR (CONSsexp (EXP, EXPSTAR))
+
+EXPLIST : (* empty *) ([])
+    | EXP EXPLIST (EXP::EXPLIST)
