@@ -15,7 +15,7 @@ exception BadIf of sexp
 exception BadLetcc of sexp
 exception BadApplication of sexp
 
-(* Temporary *)
+(* FMC Temporary *)
 exception Unimplemented of string
 exception Impossible of string
 
@@ -25,24 +25,29 @@ fun isList NILsexp = true
   | isList _ = false
 
 fun isNameList NILsexp = true
-  | isNameList (CONSsexp (IDsexp _, tail)) = isNameList tail
+  | isNameList (CONSsexp (SYMsexp _, tail)) = isNameList tail
   | isNameList (CONSsexp (_, tail)) = false
+
+fun appendV NILval t = t
+  | appendV (CONSval (head, tail)) t =
+    CONSval (head, appendV tail t)
 
 
 
 (*
  * Three forms.
  * Need to eventually support the hackish internal definitions.
+ * FMC currently don't check that not local.
  *)
-fun valueDefine (CONSsexp (IDsexp var, CONSsexp (e, NILsexp))) =
+fun valueDefine (CONSsexp (SYMsexp var, CONSsexp (e, NILsexp))) =
     (* (define <variable> <expression> *)
     UNITval (Globals.extendGlobalTable var (ref (theMeaning e)))
-  | valueDefine (CONSsexp (CONSsexp (IDsexp name,
+  | valueDefine (CONSsexp (CONSsexp (SYMsexp name,
 				     rest as CONSsexp _),
 			   body as CONSsexp _)) =
-    if isList rest
+    if isList rest then
         (* (define (<variable> <variable>* ) <body>) *)
-	then raise Unimplemented
+	raise Unimplemented
 	    "(define (<variable> <variable>* ) <body>)"
     else
         (* (define (<variable> <variable>* . <variable>) <body>) *)
@@ -65,27 +70,44 @@ and meaning e table = (expressionToAction e) e table
  * Translate the S-expression into a value.
  *)
 and valueQuote (CONSsexp (e, NILsexp)) =
-    valueQuoteSexp e
+    quote e
   | valueQuote e =
     raise Impossible "quote - should be (quote <datum>)"
 
-and valueQuoteSexp (INTsexp i) = INTval i
-  | valueQuoteSexp (CHARsexp c) = CHARval c
-  | valueQuoteSexp (BOOLsexp b) = BOOLval b
-  | valueQuoteSexp (STRINGsexp s) = STRINGval s
-  | valueQuoteSexp (IDsexp s) = SYMval s (* introduction *)
-(*
-  | valueQuoteSexp (VECsexp v) = VECval (vecStoV v)
+and valueQuasiQuote (CONSsexp (e, NILsexp)) table =
+    quasiQuote e table
+  | valueQuasiQuote e _ =
+    raise Impossible "quote - should be (quasiquote <datum>)"
+
+and quasiQuote (e as INTsexp i) _ = quote e
+  | quasiQuote (e as CHARsexp c) _ = quote e
+  | quasiQuote (e as BOOLsexp b) _ = quote e
+  | quasiQuote (e as STRINGsexp s) _ = quote e
+  | quasiQuote (e as NILsexp) _ = quote e
+  | quasiQuote (e as SYMsexp s) _ = quote e
+  | quasiQuote (VECsexp v) table =
+    VECval (Vector.tabulate (Vector.length v,
+			     fn i => quasiQuote (Vector.sub (v, i))
+			                        table))
+  | quasiQuote (CONSsexp (SYMsexp "unquote", CONSsexp (tail, NILsexp)))
+    table =
+    meaning tail table
+  | quasiQuote (CONSsexp (CONSsexp (SYMsexp "unquote-splicing",
+				    CONSsexp (splice, NILsexp)),
+			  tail)) table =
+    appendV (meaning splice table) (quasiQuote tail table)
+(*fmc
+  | quasiQuote (CONSsexp (SYMsexp "quasiquote", tail)) =
+    quasiQuote (quasiQuote tail))
 *)
-  | valueQuoteSexp NILsexp = NILval
-  | valueQuoteSexp (CONSsexp (head, tail)) =
-    (* deep recursive quoting *)
-    CONSval (valueQuoteSexp head, valueQuoteSexp tail)
+  | quasiQuote (CONSsexp (head, tail)) table =
+    CONSval (quasiQuote head table,
+	     quasiQuote tail table)
 
 and valueIdentifier e table  = !(Table.lookup table e)
 
 (* (set! <variable> <expression>) *)
-and valueSet (CONSsexp (IDsexp var, CONSsexp (e, NILsexp))) table =
+and valueSet (CONSsexp (SYMsexp var, CONSsexp (e, NILsexp))) table =
     UNITval ((Table.lookup table var) := meaning e table)
   | valueSet e _ = raise BadSet e
 
@@ -94,32 +116,31 @@ and valueSet (CONSsexp (IDsexp var, CONSsexp (e, NILsexp))) table =
  *)
 and valueLambda (e as CONSsexp (vars as CONSsexp _, body as CONSsexp _))
     table =
-    if isList body
-	then if isList vars		(* (lambda (<variable>+) body) *)
-		 then if isNameList vars
-			  then FUNCval
-			      (fn args => beglis
-			                  body
-					  (multiExtend vars
-					               (boxAll args)
-						       table))
-		      else
-			  raise BadLambda e
-	     else
-		 (* Will need to check name dotted pair here *)
-		 raise Unimplemented
-		     "(lambda (<variable>+ . <variable) body)"
+    if isList body then
+	if isList vars then		(* (lambda (<variable>+) body) *)
+	    if isNameList vars then
+		FUNCval (ref (fn args => beglis
+			      body
+			      (multiExtend vars
+			       (boxAll args)
+			       table)))
+	    else
+		raise BadLambda e
+	else
+	    (* Will need to check name dotted pair here *)
+	    raise Unimplemented
+		"(lambda (<variable>+ . <variable) body)"
     else
 	raise BadLambda e
   | valueLambda (e as CONSsexp (NILsexp, body as CONSsexp _)) table =
     (* (lambda () body) *)
-    if isList body
-	then FUNCval (fn args => beglis body table)
+    if isList body then
+	FUNCval (ref (fn _ => beglis body table))
     else
 	raise BadLambda e
-  | valueLambda (e as CONSsexp (IDsexp var, body as CONSsexp _)) table =
-    if isList body
-	then raise Unimplemented "(lambda variable body)"
+  | valueLambda (e as CONSsexp (SYMsexp var, body as CONSsexp _)) table =
+    if isList body then
+	raise Unimplemented "(lambda variable body)"
     else
 	raise BadLambda e
   | valueLambda e _ = raise BadLambda e
@@ -137,15 +158,11 @@ and beglis (CONSsexp (e, NILsexp)) table = meaning e table
      beglis es table
      )
 
-(* Need to handle improper lists? *)
-and boxAll args = mapVtoL ref args
-and mapVtoL f NILval = []
-  | mapVtoL f (CONSval (head, tail)) =
-    (f head)::(mapVtoL f tail)
+and boxAll args = map ref args
 
 (* return new table *)
 and multiExtend NILsexp [] table = table
-  | multiExtend (CONSsexp (IDsexp name, names)) (cell::cells)
+  | multiExtend (CONSsexp (SYMsexp name, names)) (cell::cells)
     table =
     Table.extend name cell (multiExtend names cells table)
   | multiExtend _ _ _ = raise Impossible
@@ -153,11 +170,10 @@ and multiExtend NILsexp [] table = table
 
 (* Call by value, left to right args *)
 and valueApplication func args table =
-    if isList args
-	then
-	    (case meaning func table of
-		 FUNCval f => f (evlis args table)
-	       | _ => raise BadApplication func)
+    if isList args then
+	(case meaning func table of
+	     (FUNCval (ref f)) => f (evlis args table)
+	   | _ => raise BadApplication func)
     else
 	raise BadApplication args
 
@@ -168,9 +184,9 @@ and valueApplication func args table =
  *)
 and evlis args table = mapStoV (fn a => meaning a table) args
 
-and mapStoV f NILsexp = NILval
+and mapStoV f NILsexp = []
   | mapStoV f (CONSsexp (head, tail)) =
-    CONSval (f head, mapStoV f tail)
+    f head :: mapStoV f tail
 
 
 
@@ -189,16 +205,16 @@ and valueIf (CONSsexp (test, CONSsexp (t, CONSsexp (f, NILsexp)))) table =
 
 (*fmc*)
 (* Need to do call-with-current-continuation instead *)
-and valueLetcc (e as CONSsexp (IDsexp name, body as CONSsexp _)) table =
-    if isList body
-	then SMLofNJ.callcc
-	    (fn skip => beglis body
-	                       (Table.extend name
-(*
-				             (ref (aPrim skip))
-*)
-(raise Unimplemented "letcc")
-					     table))
+and valueLetcc (e as CONSsexp (SYMsexp name, body as CONSsexp _)) table =
+    if isList body then
+	SMLofNJ.Cont.callcc
+	(fn skip => beglis body
+	 (Table.extend name
+	  (*
+	   (ref (aPrim skip))
+	   *)
+	  (raise Unimplemented "letcc")
+	       table))
     else
 	raise BadLetcc e
   | valueLetcc e _ = raise BadLetcc e
@@ -207,47 +223,48 @@ and valueLetcc (e as CONSsexp (IDsexp name, body as CONSsexp _)) table =
 
 (* interpreter *)
 
-and value (CONSsexp (IDsexp "define", x)) = valueDefine x
+and value (CONSsexp (SYMsexp "define", x)) = valueDefine x
   | value e = theMeaning e
 
 and expressionToAction (e as CONSsexp (head, tail)) =
-    if isList e
-	then listToAction head tail
+    if isList e then
+	listToAction head tail
     else
 	raise BadExpression e
   | expressionToAction e = atomToAction e
 
-and atomToAction (INTsexp i) _ _ = INTval i
-  | atomToAction (CHARsexp c) _ _ = CHARval c
-  | atomToAction (BOOLsexp b) _ _ = BOOLval b
-  | atomToAction (STRINGsexp s) _ _ = STRINGval s
-  | atomToAction (e as VECsexp v) _ _ = valueQuoteSexp e
-  | atomToAction NILsexp _ _ = NILval
+and atomToAction (e as INTsexp i) _ _ = quote e
+  | atomToAction (e as CHARsexp c) _ _ = quote e
+  | atomToAction (e as BOOLsexp b) _ _ = quote e
+  | atomToAction (e as STRINGsexp s) _ _ = quote e
+  | atomToAction (e as VECsexp v) _ _ = quote e
+  | atomToAction (e as NILsexp) _ _ = quote e
 
-    (* Add primitives here. *)
-  | atomToAction (IDsexp "cons") _ _ = FUNCval (makePrim2 "cons" primCons)
-  | atomToAction (IDsexp "car") _ _ = FUNCval (makePrim1 "car" primCar)
-  | atomToAction (IDsexp "cdr") _ _ = FUNCval (makePrim1 "cdr" primCdr)
-  | atomToAction (IDsexp "null?") _ _ = FUNCval (makePrim1 "null?" primNull)
-  | atomToAction (IDsexp "eq?") _ _ = FUNCval (makePrim2 "eq?" primEq)
-  | atomToAction (IDsexp "atom?") _ _ = FUNCval (makePrim1 "atom?" primAtom)
-  | atomToAction (IDsexp "zero?") _ _ = FUNCval (makePrim1 "zero?" primZero)
-  | atomToAction (IDsexp "add1") _ _ = FUNCval (makePrim1 "add1" primAdd1)
-  | atomToAction (IDsexp "sub1") _ _ = FUNCval (makePrim1 "sub1" primSub1)
-  | atomToAction (IDsexp "number?") _ _ = FUNCval (makePrim1 "number?"
-						   primNumber)
+  (* Add primitives here. *)
+  | atomToAction (SYMsexp "cons") _ _ = makePrimFunc2 "cons" primCons
+  | atomToAction (SYMsexp "car") _ _ = makePrimFunc1 "car" primCar
+  | atomToAction (SYMsexp "cdr") _ _ = makePrimFunc1 "cdr" primCdr
+  | atomToAction (SYMsexp "null?") _ _ = makePrimFunc1 "null?" primNull
+  | atomToAction (SYMsexp "eq?") _ _ = makePrimFunc2 "eq?" primEq
+  | atomToAction (SYMsexp "atom?") _ _ = makePrimFunc1 "atom?" primAtom
+  | atomToAction (SYMsexp "zero?") _ _ = makePrimFunc1 "zero?" primZero
+  | atomToAction (SYMsexp "add1") _ _ = makePrimFunc1 "add1" primAdd1
+  | atomToAction (SYMsexp "sub1") _ _ = makePrimFunc1 "sub1" primSub1
+  | atomToAction (SYMsexp "number?") _ _ = makePrimFunc1 "number?" primNumber
 
-  | atomToAction (IDsexp s) _ table = valueIdentifier s table
+  | atomToAction (SYMsexp s) _ table = valueIdentifier s table
 
 (*
  * Need to add extra builtins, and also support macros.
  * Then would use third argument??
  *)
-and listToAction (IDsexp "quote") e _ _ = valueQuote e
-  | listToAction (IDsexp "lambda") e _ table = valueLambda e table
-  | listToAction (IDsexp "letcc") e _ table = valueLetcc e table
-  | listToAction (IDsexp "set!") e _ table = valueSet e table
-  | listToAction (IDsexp "if") e _ table = valueIf e table
+and listToAction (SYMsexp "quote") e _ _ = valueQuote e
+(*fmc*)
+  | listToAction (SYMsexp "quasiquote") e _ table = valueQuasiQuote e table
+  | listToAction (SYMsexp "lambda") e _ table = valueLambda e table
+  | listToAction (SYMsexp "letcc") e _ table = valueLetcc e table
+  | listToAction (SYMsexp "set!") e _ table = valueSet e table
+  | listToAction (SYMsexp "if") e _ table = valueIf e table
   | listToAction func args _ table = valueApplication func args table
 
 
@@ -258,11 +275,14 @@ and listToAction (IDsexp "quote") e _ _ = valueQuote e
  * Need to clean up by separating out intended arities
  *)
 and makePrim1 name f =
-    fn (CONSval (arg1, NILval)) => f arg1
+    fn [arg1] => f arg1
      | _ => raise Arity (1, name)
 and makePrim2 name f =
-    fn (CONSval (arg1, CONSval (arg2, NILval))) => f (arg1, arg2)
+    fn [arg1, arg2] => f (arg1, arg2)
      | _ => raise Arity (2, name)
+
+and makePrimFunc1 name f = (FUNCval (ref (makePrim1 name f)))
+and makePrimFunc2 name f = (FUNCval (ref (makePrim2 name f)))
 
 and primCons (a, b) =  CONSval (a, b)
 and primCar (CONSval (a, _)) = a
