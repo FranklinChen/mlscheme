@@ -29,8 +29,8 @@ fun isNameList NILsexp = true
   | isNameList (CONSsexp (_, tail)) = false
 
 fun appendV NILval t = t
-  | appendV (CONSval (head, tail)) t =
-    CONSval (head, appendV tail t)
+  | appendV (CONSval (refhead, ref tail)) t =
+    CONSval (refhead, ref (appendV tail t))
 
 
 
@@ -101,14 +101,14 @@ and quasiQuote (e as INTsexp i) _ = quote e
     quasiQuote (quasiQuote tail))
 *)
   | quasiQuote (CONSsexp (head, tail)) table =
-    CONSval (quasiQuote head table,
-	     quasiQuote tail table)
+    CONSval (ref (quasiQuote head table),
+	     ref (quasiQuote tail table))
 
 and valueIdentifier e table  = !(Table.lookup table e)
 
 (* (set! <variable> <expression>) *)
 and valueSet (CONSsexp (SYMsexp var, CONSsexp (e, NILsexp))) table =
-    UNITval ((Table.lookup table var) := meaning e table)
+    UNITval (Table.lookup table var := meaning e table)
   | valueSet e _ = raise BadSet e
 
 (*
@@ -284,10 +284,10 @@ and makePrim2 name f =
 and makePrimFunc1 name f = (FUNCval (ref (makePrim1 name f)))
 and makePrimFunc2 name f = (FUNCval (ref (makePrim2 name f)))
 
-and primCons (a, b) =  CONSval (a, b)
-and primCar (CONSval (a, _)) = a
+and primCons (a, b) =  CONSval (ref a, ref b)
+and primCar (CONSval (ref a, _)) = a
   | primCar _ = raise TypeError "car"
-and primCdr (CONSval (_, b)) = b
+and primCdr (CONSval (_, ref b)) = b
   | primCdr _ = raise TypeError "cdr"
 and primNull NILval = BOOLval true
   | primNull _ = BOOLval false
