@@ -26,3 +26,12 @@ val foo5' = ip foo5
 
 val foo6 = "`(13 ,foo ,@bar me)"
 val foo6' = ip foo6
+
+val foo7 = "(define baz '(a b))"
+val foo7' = ip foo7
+
+val foo8 = "(set-cdr! baz '(c d e))"
+val foo8' = ip foo8
+
+val foo9 = "baz";
+val foo9' = ip foo9
