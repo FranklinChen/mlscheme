@@ -1,0 +1,65 @@
+(* Scheme grammar *)
+
+(* Actually, need to handle dotted pairs. *)
+(* Also, should create new data type without abbreviations, etc. *)
+datatype sexp = INTsexp of int
+  | CHARsexp of char
+  | BOOLsexp of bool
+  | STRINGsexp of string
+  | IDsexp of string
+  | LISTsexp of sexp list
+
+%%
+
+%eop EOF
+
+%pos int
+
+%term EOF
+  | DOT
+  | LPAREN
+  | LVEC
+  | RPAREN
+  | QUOTESCHEME
+  | QUASIQUOTE
+  | UNQUOTE
+  | UNQUOTESPLICING
+  | INT of int
+  | CHAR of char
+  | BOOL of bool
+  | STRING of string
+  | ID of string
+
+%nonterm START of sexp list | EXP of sexp | EXPS of sexp list
+
+%name Scheme
+
+%prefer RPAREN
+%keyword DOT LPAREN LVEC RPAREN
+%keyword QUOTESCHEME QUASIQUOTE UNQUOTE UNQUOTESPLICING
+%keyword BOOL
+
+%noshift EOF
+%value ID ("*bogus*")
+%verbose
+
+%%
+
+START : EXPS (EXPS)
+
+EXPS : (* empty *) ([])
+     | EXP EXPS (EXP :: EXPS)
+
+EXP : INT (INTsexp INT)
+    | CHAR (CHARsexp CHAR)
+    | BOOL (BOOLsexp BOOL)
+    | STRING (STRINGsexp STRING)
+    | ID (IDsexp ID)
+    | LPAREN EXPS RPAREN (LISTsexp EXPS)
+    | LVEC EXPS RPAREN (LISTsexp ((IDsexp "vector")::EXPS))
+    | QUOTESCHEME EXP (LISTsexp [IDsexp "quote", EXP])
+    | QUASIQUOTE EXP (LISTsexp [IDsexp "quasiquote", EXP])
+    | UNQUOTE EXP (LISTsexp [IDsexp "unquote", EXP])
+    | UNQUOTESPLICING EXP (LISTsexp [IDsexp "unquote-splicing", EXP])
+
+(* DOT *)
