@@ -8,7 +8,7 @@ datatype value = INTval of int
     | BOOLval of bool
     | STRINGval of string
     | NILval
-    | CONSval of value * value
+    | CONSval of value ref * value ref
     | VECval of value vector
     | SYMval of string (* introduced by QUOTE *)
     | FUNCval of (value list -> value) ref
@@ -24,7 +24,7 @@ fun quote (INTsexp i) = INTval i
 			     fn i => quote (Vector.sub (v, i))))
   | quote NILsexp = NILval
   | quote (CONSsexp (head, tail)) =
-    CONSval (quote head, quote tail)
+    CONSval (ref (quote head), ref (quote tail))
 
 (*
  * Pretty-printing
@@ -54,12 +54,12 @@ fun pp (INTval i) = Int.toString i
 		 "#(" ^ pp (Vector.sub (v, 0)) ^ ppVec 1 ^ ")"
 	     end)
   | pp NILval = "()"
-  | pp (CONSval (head, tail)) =
+  | pp (CONSval (ref head, ref tail)) =
     let
-	fun last (CONSval (head, tail)) = last tail
+	fun last (CONSval (_, ref tail)) = last tail
 	  | last x = x
 	fun ppTail NILval = ""
-	  | ppTail (CONSval (head, tail)) =
+	  | ppTail (CONSval (ref head, ref tail)) =
 	    " " ^ pp head ^ ppTail tail
 	  | ppTail _ = "<impossible-list>"
     in
