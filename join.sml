@@ -15,12 +15,6 @@ val parse = fn s =>
 
 val keybd = fn () =>
   let val dev = TextIO.stdIn
-
-  (* note: some implementations of ML, such as SML of NJ,
-     have more efficient versions of input_line in their built-in
-     environment
-   *)
-
       val stream = SchemeParser.makeLexer (fn i => TextIO.inputLine dev)
       val _ = SchemeLex.UserDeclarations.pos := 1
       val error = fn (e,i:int,_) => TextIO.output(TextIO.stdErr,"stdIn," ^
