@@ -1,0 +1,432 @@
+
+state 0:
+
+	START : . EXP 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	START	goto 30
+	EXP	goto 1
+
+	.	error
+
+
+state 1:
+
+	START : EXP .  (reduce by rule 0)
+
+
+
+	.	reduce by rule 0
+
+
+state 2:
+
+	EXP : ID .  (reduce by rule 5)
+
+
+
+	.	reduce by rule 5
+
+
+state 3:
+
+	EXP : STRING .  (reduce by rule 4)
+
+
+
+	.	reduce by rule 4
+
+
+state 4:
+
+	EXP : BOOL .  (reduce by rule 3)
+
+
+
+	.	reduce by rule 3
+
+
+state 5:
+
+	EXP : CHAR .  (reduce by rule 2)
+
+
+
+	.	reduce by rule 2
+
+
+state 6:
+
+	EXP : INT .  (reduce by rule 1)
+
+
+
+	.	reduce by rule 1
+
+
+state 7:
+
+	EXP : UNQUOTESPLICING . EXP 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 13
+
+	.	error
+
+
+state 8:
+
+	EXP : UNQUOTE . EXP 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 14
+
+	.	error
+
+
+state 9:
+
+	EXP : QUASIQUOTE . EXP 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 15
+
+	.	error
+
+
+state 10:
+
+	EXP : QUOTESCHEME . EXP 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 16
+
+	.	error
+
+
+state 11:
+
+	EXP : LVEC . EXPLIST RPAREN 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 18
+	EXPLIST	goto 17
+
+	.	reduce by rule 15
+
+
+state 12:
+
+	EXP : LPAREN . EXPSTAR RPAREN 
+	EXP : LPAREN . EXP EXPLIST DOT EXP RPAREN 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 20
+	EXPSTAR	goto 19
+
+	.	reduce by rule 13
+
+
+state 13:
+
+	EXP : UNQUOTESPLICING EXP .  (reduce by rule 12)
+
+
+
+	.	reduce by rule 12
+
+
+state 14:
+
+	EXP : UNQUOTE EXP .  (reduce by rule 11)
+
+
+
+	.	reduce by rule 11
+
+
+state 15:
+
+	EXP : QUASIQUOTE EXP .  (reduce by rule 10)
+
+
+
+	.	reduce by rule 10
+
+
+state 16:
+
+	EXP : QUOTESCHEME EXP .  (reduce by rule 9)
+
+
+
+	.	reduce by rule 9
+
+
+state 17:
+
+	EXP : LVEC EXPLIST . RPAREN 
+
+	RPAREN	shift 21
+
+
+	.	error
+
+
+state 18:
+
+	EXPLIST : EXP . EXPLIST 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 18
+	EXPLIST	goto 22
+
+	.	reduce by rule 15
+
+
+state 19:
+
+	EXP : LPAREN EXPSTAR . RPAREN 
+
+	RPAREN	shift 23
+
+
+	.	error
+
+
+state 20:
+
+	EXP : LPAREN EXP . EXPLIST DOT EXP RPAREN 
+	EXPSTAR : EXP . EXPSTAR 
+
+	DOT	reduce by rule 15
+	LPAREN	shift 12
+	LVEC	shift 11
+	RPAREN	reduce by rule 13
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 26
+	EXPSTAR	goto 25
+	EXPLIST	goto 24
+
+	.	error
+
+
+state 21:
+
+	EXP : LVEC EXPLIST RPAREN .  (reduce by rule 8)
+
+
+
+	.	reduce by rule 8
+
+
+state 22:
+
+	EXPLIST : EXP EXPLIST .  (reduce by rule 16)
+
+
+
+	.	reduce by rule 16
+
+
+state 23:
+
+	EXP : LPAREN EXPSTAR RPAREN .  (reduce by rule 6)
+
+
+
+	.	reduce by rule 6
+
+
+state 24:
+
+	EXP : LPAREN EXP EXPLIST . DOT EXP RPAREN 
+
+	DOT	shift 27
+
+
+	.	error
+
+
+state 25:
+
+	EXPSTAR : EXP EXPSTAR .  (reduce by rule 14)
+
+
+
+	.	reduce by rule 14
+
+
+state 26:
+
+	EXPSTAR : EXP . EXPSTAR 
+	EXPLIST : EXP . EXPLIST 
+
+	DOT	reduce by rule 15
+	LPAREN	shift 12
+	LVEC	shift 11
+	RPAREN	reduce by rule 13
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 26
+	EXPSTAR	goto 25
+	EXPLIST	goto 22
+
+	.	error
+
+
+state 27:
+
+	EXP : LPAREN EXP EXPLIST DOT . EXP RPAREN 
+
+	LPAREN	shift 12
+	LVEC	shift 11
+	QUOTESCHEME	shift 10
+	QUASIQUOTE	shift 9
+	UNQUOTE	shift 8
+	UNQUOTESPLICING	shift 7
+	INT	shift 6
+	CHAR	shift 5
+	BOOL	shift 4
+	STRING	shift 3
+	ID	shift 2
+
+	EXP	goto 28
+
+	.	error
+
+
+state 28:
+
+	EXP : LPAREN EXP EXPLIST DOT EXP . RPAREN 
+
+	RPAREN	shift 29
+
+
+	.	error
+
+
+state 29:
+
+	EXP : LPAREN EXP EXPLIST DOT EXP RPAREN .  (reduce by rule 7)
+
+
+
+	.	reduce by rule 7
+
+
+state 30:
+
+
+	EOF	accept
+
+
+	.	error
+
+51 of 161 action table entries left after compaction
+19 goto table entries
