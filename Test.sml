@@ -1,5 +1,8 @@
 (* For testing. *)
 
+structure Test =
+struct
+
 val ps = #1 o Join.parseString
 
 val pps = Sexp.pp o ps
@@ -35,3 +38,5 @@ val foo8' = ip foo8
 
 val foo9 = "baz";
 val foo9' = ip foo9
+
+end

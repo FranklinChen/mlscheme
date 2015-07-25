@@ -1,6 +1,8 @@
 Group is
 
-ml-yacc-lib.cm
+$/basis.cm
+$/ml-yacc-lib.cm
+
 Table.sig
 Table.sml
 Sexp.sml

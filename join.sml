@@ -18,7 +18,7 @@ val parse = fn s =>
 
 val keybd = fn () =>
   let val dev = TextIO.stdIn
-      val stream = SchemeParser.makeLexer (fn i => TextIO.inputLine dev)
+      val stream = SchemeParser.makeLexer (fn i => Option.valOf(TextIO.inputLine dev))
       val _ = SchemeLex.UserDeclarations.pos := 1
       val error = fn (e,i:int,_) => TextIO.output(TextIO.stdErr,"stdIn," ^
 		  " line " ^ (Int.toString i) ^ ", Error: " ^ e ^ "\n")

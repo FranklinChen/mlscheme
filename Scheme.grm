@@ -11,7 +11,7 @@ fun dottedPair xs last =
     end
 
 fun abbrevPrefix s e =
-    CONSsexp (IDsexp s, CONSsexp (e, NILsexp))
+    CONSsexp (SYMsexp s, CONSsexp (e, NILsexp))
 
 %%
 
@@ -59,7 +59,7 @@ EXP : INT (INTsexp INT)
     | CHAR (CHARsexp CHAR)
     | BOOL (BOOLsexp BOOL)
     | STRING (STRINGsexp STRING)
-    | ID (IDsexp ID)
+    | ID (SYMsexp ID)
     | LPAREN EXPSTAR RPAREN (EXPSTAR)
     | LPAREN EXP EXPLIST DOT EXP RPAREN (dottedPair (EXP1::EXPLIST) EXP2)
     | LVEC EXPLIST RPAREN (VECsexp (Vector.fromList EXPLIST))

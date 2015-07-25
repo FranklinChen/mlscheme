@@ -5,7 +5,7 @@ datatype sexp = INTsexp of int
   | CHARsexp of char
   | BOOLsexp of bool
   | STRINGsexp of string (* "foo" *)
-  | IDsexp of string (* foo *)
+  | SYMsexp of string (* foo *)
   | NILsexp (* () *)
   | CONSsexp of sexp * sexp (* (...), including dotted pair *)
   | VECsexp of sexp vector
@@ -23,7 +23,7 @@ fun pp (INTsexp i) = Int.toString i
   | pp (BOOLsexp false) = "#f"
   | pp (BOOLsexp true) = "#t"
   | pp (STRINGsexp s) = "\"" ^ s ^ "\""
-  | pp (IDsexp s) = s
+  | pp (SYMsexp s) = s
   | pp (VECsexp v) =
     (case Vector.length v of
 	 0 => "#()"
